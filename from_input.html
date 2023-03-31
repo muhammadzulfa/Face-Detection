@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Deteksi Wajah - TensorFlow.js dengan model BlazeFace</title>
+</head>
+
+<body>
+
+    <h3>Letakkan gambar Anda</h3>
+
+    <input type="file" accept="image/*" onchange="loadImage(event)">
+    <br>
+    <canvas id="canvas"></canvas>
+
+    <script src="js/tensorflow/tf.min.js"></script>
+    <script src="js/tensorflow_models/blazeface.js"></script>
+    <script>
+        // Mendapatkan elemen canvas dan membuat konteks 2D.
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Mendefinisikan fungsi async untuk memproses gambar.
+        async function processImage(img) {
+            // Mengatur lebar dan tinggi kanvas sama dengan lebar dan tinggi gambar.
+            canvas.width = img.width;
+            canvas.height = img.height;
+
+            // Memuat model Blazeface.
+            const model = await blazeface.load();
+
+            // Memproses gambar dengan model Blazeface, model akan mengembalikan array bounding box, probabilitas, dan landmarks.
+            const returnTensors = false; // Teruskan `true` untuk mendapatkan kembali tensor, bukan nilai.
+            const predictions = await model.estimateFaces(img, returnTensors);
+
+            // Menampilkan jumlah wajah yang terdeteksi pada gambar.
+            alert(predictions.length + ' wajah terdeteksi');
+
+            // Menggambar gambar pada kanvas.
+            ctx.drawImage(img, 0, 0, img.width, img.height);
+
+            // Menggambar bounding box (kotak pembatas) pada setiap wajah yang terdeteksi.
+            if (predictions.length > 0) {
+                predictions.forEach((prediction) => {
+                    // Mengambil koordinat titik paling atas kiri dan lebar serta tinggi bounding box.
+                    const [x, y] = prediction.topLeft;
+                    const [width, height] = [prediction.bottomRight[0] - prediction.topLeft[0], prediction.bottomRight[1] - prediction.topLeft[1]];
+
+                    // Mulai menggambar bounding box.
+                    ctx.beginPath(); // Membuat path baru pada canvas.
+                    ctx.lineWidth = 1; // Menentukan lebar garis pada canvas.
+                    ctx.strokeStyle = 'red'; // Menentukan warna garis pada canvas.
+                    ctx.rect(x, y, width, height); // Membuat kotak pembatas pada koordinat tertentu dengan lebar dan tinggi tertentu.
+                    ctx.stroke(); // Menggambar garis pada canvas sesuai dengan path yang dibuat sebelumnya.
+                });
+            }
+        }
+
+        // Mendefinisikan fungsi untuk memuat gambar ketika user memilih file.
+        function loadImage(event) {
+            const file = event.target.files[0];
+            if (!file.type.match('image.*')) {
+                // Munculkan pesan jika file yang dipilih bukan gambar.
+                alert('File bukan gambar.');
+                return;
+            }
+
+            // Membaca file yang dipilih menggunakan FileReader.
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image(); // Membuat objek gambar baru.
+                img.src = event.target.result;
+                img.onload = () => processImage(img); // Ketika gambar selesai dimuat, panggil fungsi processImage dengan gambar sebagai argumen.
+            };
+        }
+    </script>
+</body>
+
+</html>
